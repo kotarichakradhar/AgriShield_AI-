@@ -2,6 +2,6 @@ streamlit
 numpy
 opencv-python-headless
 Pillow
-openai
+ibm-watsonx-ai
 torch
 torchvision
