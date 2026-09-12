@@ -20,14 +20,16 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # ── IBM Granite / OpenAI-compatible client ───────────────────────────────────
+# ── IBM watsonx.ai client ──────────────────────────────────────────────────
 try:
-    from openai import OpenAI as _OpenAI  # ibm-generative-ai or openai sdk
+    from ibm_watsonx_ai import Credentials
+    from ibm_watsonx_ai.foundation_models import ModelInference
+    from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 
-    _OPENAI_AVAILABLE = True
+    _WATSONX_AVAILABLE = True
 except ImportError:
-    _OPENAI_AVAILABLE = False
-    logger.warning("openai SDK not found — install it: pip install openai")
-
+    _WATSONX_AVAILABLE = False
+    logger.warning("ibm-watsonx-ai SDK not found — install it: pip install ibm-watsonx-ai")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Input / Output contracts
