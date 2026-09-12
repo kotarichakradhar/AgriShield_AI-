@@ -139,14 +139,47 @@ def _llm_inference(
     severity_label: str,
     ctx: CropContext,
 ) -> Optional[DiagnosticReport]:
-    """
-    Run inference via IBM Granite (or any OpenAI-compatible API).
-    Raises RuntimeError if the SDK is missing or no API key is configured.
-    """
-    if not _OPENAI_AVAILABLE:
+    """Run inference via the official IBM watsonx.ai SDK."""
+    if not _WATSONX_AVAILABLE:
         raise RuntimeError(
-            "openai SDK is required. Install it: pip install openai"
+            "ibm-watsonx-ai SDK is required. Install it: pip install ibm-watsonx-ai"
         )
+
+    api_key = os.getenv("GRANITE_API_KEY")
+    url = os.getenv("GRANITE_BASE_URL", "https://us-south.ml.cloud.ibm.com")
+    project_id = os.getenv("WATSONX_PROJECT_ID")
+    model_id = os.getenv("GRANITE_MODEL", "ibm/granite-3-8b-instruct")
+
+    if not api_key:
+        raise RuntimeError("No API key found. Set GRANITE_API_KEY in your environment.")
+    if not project_id:
+        raise RuntimeError("WATSONX_PROJECT_ID is missing. Add your watsonx Project ID to .env or secrets.")
+
+    user_prompt = _build_user_prompt(
+        chlorosis_pct, lesion_count, lesion_density,
+        severity_score, severity_label, ctx,
+    )
+    full_prompt = f"{_SYSTEM_PROMPT}\n\n{user_prompt}"
+
+    try:
+        credentials = Credentials(url=url, api_key=api_key)
+        params = {
+            GenParams.DECODING_METHOD: "greedy",
+            GenParams.MAX_NEW_TOKENS: 1024,
+            GenParams.TEMPERATURE: 0.2,
+        }
+        model = ModelInference(
+            model_id=model_id,
+            credentials=credentials,
+            project_id=project_id,
+            params=params,
+        )
+        response_text = model.generate_text(prompt=full_prompt)
+        return _parse_llm_response(response_text, severity_label)
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        raise RuntimeError(f"Watsonx call failed: {exc}") from exc
 
     api_key  = os.getenv("GRANITE_API_KEY") or os.getenv("OPENAI_API_KEY")
     base_url = os.getenv("GRANITE_BASE_URL", "https://us-south.ml.cloud.ibm.com/ml/v1/text/generation")
